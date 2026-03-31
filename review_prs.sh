@@ -81,7 +81,7 @@ $review_bodies"
 
     # Check for missing license file reference
     if echo "$diff" | grep -qi "license" && ! echo "$files_changed" | grep -qi "LICENSE"; then
-        issues="$issues\n- README references a LICENSE file but no LICENSE file is included in this PR."
+        issues="$issues\n- README references a LICENSE file but no LICENSE file is included in this PR. 123"
     fi
 
     # Check for placeholder content
