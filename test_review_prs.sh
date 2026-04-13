@@ -94,6 +94,112 @@ else
     echo "  SKIP: shellcheck not installed"
 fi
 
+# Test 8: Placeholder detection
+echo "Test 8: Placeholder detection"
+test8_pass=true
+diff_with_placeholders="some code <owner> and <your-username> and <your-fork> and <upstream-owner>"
+for pattern in '<owner>' '<your-username>' '<your-fork>' '<upstream-owner>'; do
+    if ! echo "$diff_with_placeholders" | grep -qF "$pattern"; then
+        test8_pass=false
+        break
+    fi
+done
+# Also verify non-placeholder HTML tags are NOT matched by the placeholder patterns
+non_placeholder="<div>"
+matched_non_placeholder=false
+for pattern in '<owner>' '<your-username>' '<your-fork>' '<upstream-owner>'; do
+    if echo "$non_placeholder" | grep -qF "$pattern"; then
+        matched_non_placeholder=true
+        break
+    fi
+done
+if [ "$test8_pass" = true ] && [ "$matched_non_placeholder" = false ]; then
+    pass "All 4 placeholder patterns detected; non-placeholder <div> not matched"
+else
+    fail "Placeholder detection failed"
+fi
+
+# Test 9: Docs-only classification
+echo "Test 9: Docs-only classification"
+# Test docs-only files
+docs_files="README.md
+CHANGELOG.txt
+docs/guide.rst"
+is_docs_only=true
+while IFS= read -r f; do
+    case "$f" in
+        *.md|*.txt|*.rst|.tokamak/*) ;;
+        *) is_docs_only=false; break ;;
+    esac
+done <<< "$docs_files"
+if [ "$is_docs_only" = true ]; then
+    # Now test with a non-docs file mixed in
+    mixed_files="README.md
+script.sh"
+    is_docs_only=true
+    while IFS= read -r f; do
+        case "$f" in
+            *.md|*.txt|*.rst|.tokamak/*) ;;
+            *) is_docs_only=false; break ;;
+        esac
+    done <<< "$mixed_files"
+    if [ "$is_docs_only" = false ]; then
+        pass "Docs-only classification: .md/.txt/.rst = docs-only, .sh breaks it"
+    else
+        fail "Docs-only classification: .sh file should break docs-only"
+    fi
+else
+    fail "Docs-only classification: .md/.txt/.rst should be docs-only"
+fi
+
+# Test 10: File extension extraction edge cases
+echo "Test 10: File extension extraction edge cases"
+test10_pass=true
+
+# Normal file: script.sh -> sh
+f="script.sh"; ext="${f##*.}"; basename_f="${f##*/}"
+[ "$ext" = "$basename_f" ] && ext="no-ext"
+[ "$ext" = "sh" ] || test10_pass=false
+
+# Normal file: README.md -> md
+f="README.md"; ext="${f##*.}"; basename_f="${f##*/}"
+[ "$ext" = "$basename_f" ] && ext="no-ext"
+[ "$ext" = "md" ] || test10_pass=false
+
+# No extension: Makefile -> no-ext
+f="Makefile"; ext="${f##*.}"; basename_f="${f##*/}"
+[ "$ext" = "$basename_f" ] && ext="no-ext"
+[ "$ext" = "no-ext" ] || test10_pass=false
+
+# Dotfile: .gitignore -> gitignore (has a dot, so extension is extracted)
+f=".gitignore"; ext="${f##*.}"; basename_f="${f##*/}"
+[ "$ext" = "$basename_f" ] && ext="no-ext"
+[ "$ext" = "gitignore" ] || test10_pass=false
+
+if [ "$test10_pass" = true ]; then
+    pass "File extension extraction: normal, no-ext, and dotfile cases all correct"
+else
+    fail "File extension extraction edge cases failed"
+fi
+
+# Test 11: Claude review header detection
+echo "Test 11: Claude review header detection"
+test11_pass=true
+# Exact match should succeed
+if ! printf '%s' "## Claude Review
+Some content" | grep -qF "## Claude Review"; then
+    test11_pass=false
+fi
+# Partial match should NOT succeed
+if printf '%s' "User claude commented" | grep -qF "## Claude Review"; then
+    test11_pass=false
+fi
+if [ "$test11_pass" = true ]; then
+    pass "Claude review header: exact match works, partial string does not false-positive"
+else
+    fail "Claude review header detection failed"
+fi
+
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="
 

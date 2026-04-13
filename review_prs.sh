@@ -33,7 +33,7 @@ echo "Found $pr_count open PR(s)."
 echo ""
 
 # Step 2-5: Process each PR
-echo "$prs" | jq -c '.[]' | while read -r pr; do
+while read -r pr; do
     number=$(echo "$pr" | jq -r '.number')
     title=$(echo "$pr" | jq -r '.title')
     echo "--- Processing PR #$number: $title ---"
@@ -57,8 +57,14 @@ ${review_bodies}"
 
     # Fetch PR details and diff
     echo "  Fetching PR details and diff..."
-    details=$(gh pr view "$number" --repo "$REPO" --json files,additions,deletions,body,commits,title)
-    diff=$(gh pr diff "$number" --repo "$REPO")
+    if ! details=$(gh pr view "$number" --repo "$REPO" --json files,additions,deletions,body,commits,title 2>&1); then
+        echo "Error: Failed to fetch details for PR #$number: $details" >&2
+        continue
+    fi
+    if ! diff=$(gh pr diff "$number" --repo "$REPO" 2>&1); then
+        echo "Error: Failed to fetch diff for PR #$number: $diff" >&2
+        continue
+    fi
 
     pr_title=$(echo "$details" | jq -r '.title')
     pr_body=$(echo "$details" | jq -r '.body // "No description provided."')
@@ -71,6 +77,10 @@ ${review_bodies}"
     file_types=""
     while IFS= read -r f; do
         ext="${f##*.}"
+        basename_f="${f##*/}"
+        if [ "$ext" = "$basename_f" ]; then
+            ext="no-ext"
+        fi
         file_types="$file_types $ext"
     done <<< "$files_changed"
     unique_types=$(echo "$file_types" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ', ' | sed 's/,$//')
@@ -153,6 +163,6 @@ ${suggestion}"
     gh pr comment "$number" --repo "$REPO" --body "$review"
     echo "  Review posted successfully for PR #$number."
     echo ""
-done
+done < <(echo "$prs" | jq -c '.[]')
 
 echo "=== Done ==="
