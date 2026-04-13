@@ -22,7 +22,7 @@ echo ""
 # Step 1: Fetch open PRs
 echo "Fetching open PRs..."
 prs=$(gh pr list --repo "$REPO" --state open --json number,title)
-pr_count=$(echo "$prs" | jq length)
+pr_count=$(printf '%s' "$prs" | jq length)
 
 if [ "$pr_count" -eq 0 ]; then
     echo "No open PRs found. Exiting."
@@ -34,8 +34,8 @@ echo ""
 
 # Step 2-5: Process each PR
 while read -r pr; do
-    number=$(echo "$pr" | jq -r '.number')
-    title=$(echo "$pr" | jq -r '.title')
+    number=$(printf '%s' "$pr" | jq -r '.number')
+    title=$(printf '%s' "$pr" | jq -r '.title')
     echo "--- Processing PR #$number: $title ---"
 
     # Check for existing Claude reviews (idempotency)
@@ -66,12 +66,12 @@ ${review_bodies}"
         continue
     fi
 
-    pr_title=$(echo "$details" | jq -r '.title')
-    pr_body=$(echo "$details" | jq -r '.body // "No description provided."')
-    additions=$(echo "$details" | jq -r '.additions')
-    deletions=$(echo "$details" | jq -r '.deletions')
-    files_changed=$(echo "$details" | jq -r '.files[].path')
-    file_count=$(echo "$details" | jq '.files | length')
+    pr_title=$(printf '%s' "$details" | jq -r '.title')
+    pr_body=$(printf '%s' "$details" | jq -r '.body // "No description provided."')
+    additions=$(printf '%s' "$details" | jq -r '.additions')
+    deletions=$(printf '%s' "$details" | jq -r '.deletions')
+    files_changed=$(printf '%s' "$details" | jq -r '.files[].path')
+    file_count=$(printf '%s' "$details" | jq '.files | length')
 
     # Analyze file types
     file_types=""
@@ -83,7 +83,7 @@ ${review_bodies}"
         fi
         file_types="$file_types $ext"
     done <<< "$files_changed"
-    unique_types=$(echo "$file_types" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ', ' | sed 's/,$//')
+    unique_types=$(printf '%s' "$file_types" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ', ' | sed 's/,$//')
 
     # Check if it's docs-only
     is_docs_only=true
@@ -100,14 +100,14 @@ ${review_bodies}"
     issues=""
 
     # Check for missing license file reference
-    if echo "$diff" | grep -qi "license" && ! echo "$files_changed" | grep -qi "LICENSE"; then
+    if printf '%s' "$diff" | grep -qi "license" && ! printf '%s' "$files_changed" | grep -qx 'LICENSE'; then
         issues="${issues}\n- README references a LICENSE file but no LICENSE file is included in this PR."
     fi
 
     # Check for placeholder content (angle-bracket tokens)
     placeholder_patterns=('<owner>' '<your-username>' '<your-fork>' '<upstream-owner>')
     for pattern in "${placeholder_patterns[@]}"; do
-        if echo "$diff" | grep -qF "$pattern"; then
+        if printf '%s' "$diff" | grep -qF "$pattern"; then
             issues="${issues}\n- Contains placeholder text (\`${pattern}\`) that should be replaced with actual values."
             break
         fi
@@ -116,17 +116,17 @@ ${review_bodies}"
     # Check README content quality for docs-only PRs
     if [ "$is_docs_only" = true ]; then
         # Check if project name in README matches repo
-        if echo "$diff" | head -5 | grep -q "^+# add-readme"; then
+        if printf '%s' "$diff" | grep -q "^+# add-readme"; then
             issues="${issues}\n- The README title is \`add-readme\` which appears to be a task name rather than the actual project name."
         fi
 
         # Check for generic/template content
-        if echo "$diff" | grep -q "A new project under active development"; then
+        if printf '%s' "$diff" | grep -q "A new project under active development"; then
             issues="${issues}\n- The README description is generic and doesn't describe what the project actually does."
         fi
 
         # Check for assumptions about tech stack
-        if echo "$diff" | grep -q "npm install" && ! gh api "repos/$REPO/contents/package.json" --jq '.name' &>/dev/null; then
+        if printf '%s' "$diff" | grep -q "npm install" && ! gh api "repos/$REPO/contents/package.json" --jq '.name' &>/dev/null; then
             issues="${issues}\n- README assumes a Node.js/npm stack but the repo may not have a package.json yet."
         fi
     fi
@@ -163,6 +163,6 @@ ${suggestion}"
     gh pr comment "$number" --repo "$REPO" --body "$review"
     echo "  Review posted successfully for PR #$number."
     echo ""
-done < <(echo "$prs" | jq -c '.[]')
+done < <(printf '%s' "$prs" | jq -c '.[]')
 
 echo "=== Done ==="
