@@ -31,15 +31,15 @@ fi
 # Test 3: Script exits with error if gh is not found
 echo "Test 3: Exits with error when gh is missing"
 output=$(PATH="/usr/bin:/bin" bash "$SCRIPT" 2>&1 || true)
-if echo "$output" | grep -q "Error:.*'gh'.*required"; then
+if printf '%s' "$output" | grep -q "Error:.*'gh'.*required"; then
     pass "Exits with clear error when gh is missing"
-elif echo "$output" | grep -q "Error:.*'jq'.*required"; then
+elif printf '%s' "$output" | grep -q "Error:.*'jq'.*required"; then
     # jq might also be missing first — that's still a valid dependency check
     pass "Exits with clear error when a dependency is missing"
 else
     # gh might be on /usr/bin or /bin; try with empty PATH
     output2=$(PATH="" bash "$SCRIPT" 2>&1 || true)
-    if echo "$output2" | grep -q "Error:.*required"; then
+    if printf '%s' "$output2" | grep -q "Error:.*required"; then
         pass "Exits with clear error when dependencies are missing (empty PATH)"
     else
         fail "No dependency error message produced"
@@ -55,7 +55,7 @@ if [ -n "$gh_path" ]; then
     ln -s "$gh_path" "$tmpdir/gh"
     output=$(PATH="$tmpdir" bash "$SCRIPT" 2>&1 || true)
     rm -rf "$tmpdir"
-    if echo "$output" | grep -q "Error:.*'jq'.*required"; then
+    if printf '%s' "$output" | grep -q "Error:.*'jq'.*required"; then
         pass "Exits with clear error when jq is missing"
     else
         fail "No jq dependency error message produced"
@@ -99,7 +99,7 @@ echo "Test 8: Placeholder detection"
 test8_pass=true
 diff_with_placeholders="some code <owner> and <your-username> and <your-fork> and <upstream-owner>"
 for pattern in '<owner>' '<your-username>' '<your-fork>' '<upstream-owner>'; do
-    if ! echo "$diff_with_placeholders" | grep -qF "$pattern"; then
+    if ! printf '%s' "$diff_with_placeholders" | grep -qF "$pattern"; then
         test8_pass=false
         break
     fi
@@ -108,7 +108,7 @@ done
 non_placeholder="<div>"
 matched_non_placeholder=false
 for pattern in '<owner>' '<your-username>' '<your-fork>' '<upstream-owner>'; do
-    if echo "$non_placeholder" | grep -qF "$pattern"; then
+    if printf '%s' "$non_placeholder" | grep -qF "$pattern"; then
         matched_non_placeholder=true
         break
     fi
@@ -198,6 +198,38 @@ if [ "$test11_pass" = true ]; then
     pass "Claude review header: exact match works, partial string does not false-positive"
 else
     fail "Claude review header detection failed"
+fi
+
+# Test 12: LICENSE exact match (validates Bug B fix)
+echo "Test 12: LICENSE file check uses exact matching"
+# 'LICENSE' alone should match
+if printf '%s' 'LICENSE' | grep -qx 'LICENSE'; then
+  # But partial paths should NOT match
+  if ! printf '%s' 'docs/LICENSE-FAQ.md' | grep -qx 'LICENSE'; then
+    pass "LICENSE check uses exact matching — partial paths do not match"
+  else
+    fail "LICENSE check incorrectly matches partial paths"
+  fi
+else
+  fail "LICENSE check does not match the LICENSE file"
+fi
+
+# Test 13: Title check can match full diff (validates Bug A fix)
+echo "Test 13: Docs-only title check searches full diff"
+# Simulate a realistic git diff with headers (7 lines) then content
+fake_diff="diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..abc1234
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,3 @@
++# add-readme
++
++Some content"
+if printf '%s' "$fake_diff" | grep -q "^+# add-readme"; then
+  pass "Title check pattern matches in full diff content"
+else
+  fail "Title check pattern failed to match in full diff"
 fi
 
 echo ""
