@@ -1,0 +1,16 @@
+# Code-wiki manifest. Read by wikiscan during a wiki index to build the
+# cross-repository graph (systems, dependency edges, event contracts).
+system: menlo-sandbox
+
+repository:
+  name: 21-points
+  type: tooling
+  owner: locnguyen1986
+
+# review_prs.sh runs against sample-claw and writes REVIEW_REPORT.md about it,
+# so the relationship is "documents", not "calls" — nothing here imports or
+# invokes that repository's code.
+depends_on:
+  - repository: sample-claw
+    relationship: documents
+    note: review_prs.sh generates review reports for this repository
