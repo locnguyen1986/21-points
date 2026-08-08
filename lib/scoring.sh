@@ -66,9 +66,16 @@ score_hand() {
     fi
 }
 
+# is_blackjack succeeds for a two-card hand worth 21.
+#
+# The score is captured BEFORE it is compared. Inlining the substitution meant
+# an invalid hand produced `[ "" -eq 21 ]`, which bash rejects with "integer
+# expression expected" and status 2 — leaking a diagnostic on stderr and
+# breaking the status-1 contract score_hand documents for its own error paths.
 is_blackjack() {
-    local hand="$1"
+    local hand="$1" score
     local -a cards
     read -ra cards <<< "$hand"
-    [ "${#cards[@]}" -eq 2 ] && [ "$(score_hand "$hand")" -eq 21 ]
+    score=$(score_hand "$hand") || return 1
+    [ "${#cards[@]}" -eq 2 ] && [ "$score" -eq 21 ]
 }

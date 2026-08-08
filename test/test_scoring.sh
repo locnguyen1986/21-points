@@ -45,6 +45,12 @@ out=$(cd "$tmp" && score_hand '* 8' 2>/dev/null); rc=$?
 check "glob rank rejected"     1 "$rc"
 rm -rf "$tmp"
 
+# is_blackjack must honour the same status-1 contract as score_hand: an
+# invalid hand used to fail with "[: : integer expression expected" and
+# status 2 because the score was compared inline before being captured.
+is_blackjack 'X 5' 2>/dev/null; rc=$?
+check "invalid hand status"    1 "$rc"
+
 is_blackjack 'A K' && check "blackjack detected" yes yes || check "blackjack detected" yes no
 is_blackjack 'A 9 A' && check "three cards not blackjack" no yes || check "three cards not blackjack" no no
 
