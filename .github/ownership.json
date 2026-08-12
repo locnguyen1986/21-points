@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "bot_account": "menlo-internal-tools",
+  "entries": [
+    {"path": ".", "pattern": "*", "approvers": ["locnguyen1986"],
+     "no_parent": false, "bot_review": "auto_approve",
+     "slack": {"team": "", "channel": ""}}
+  ]
+}
