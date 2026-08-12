@@ -54,6 +54,11 @@ check "invalid hand status"    1 "$rc"
 is_blackjack 'A K' && check "blackjack detected" yes yes || check "blackjack detected" yes no
 is_blackjack 'A 9 A' && check "three cards not blackjack" no yes || check "three cards not blackjack" no no
 
+check "dealer hits 16"        hit   "$(dealer_action '10 6')"
+check "dealer stands on 17"   stand "$(dealer_action '10 7')"
+check "dealer stands on 20"   stand "$(dealer_action 'K Q')"
+check "dealer hits soft 16"   hit   "$(dealer_action 'A 5')"
+
 echo
 echo "passed ${pass}, failed ${fail}"
 [ "$fail" -eq 0 ]

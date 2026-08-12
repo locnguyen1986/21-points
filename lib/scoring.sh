@@ -79,3 +79,15 @@ is_blackjack() {
     score=$(score_hand "$hand") || return 1
     [ "${#cards[@]}" -eq 2 ] && [ "$score" -eq 21 ]
 }
+
+# dealer_action echoes the house action for the dealer's hand: "hit" while the
+# hand totals 16 or less, "stand" at 17 or more (the dealer stands on all 17s).
+dealer_action() {
+    local hand="$1" score
+    score=$(score_hand "$hand") || return 1
+    if [ "$score" -le 16 ]; then
+        echo hit
+    else
+        echo stand
+    fi
+}
