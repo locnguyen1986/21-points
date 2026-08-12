@@ -1,0 +1,26 @@
+# AutoQA manifest for 21-points.
+#
+# 21-points is a small shell hand-scoring library (lib/scoring.sh) with a test
+# suite (test/test_scoring.sh) — there is no long-running server. So the QA
+# environment runs the real scoring tests as its setup gate, then serves the
+# repository over HTTP so the probe has a base_url to confirm the environment
+# actually stands up.
+version: 1
+
+environments:
+  - name: sandbox
+    mode: sandbox
+    setup:
+      - chmod +x lib/scoring.sh test/test_scoring.sh
+      - bash test/test_scoring.sh
+    start: python3 -m http.server 3000
+    base_url: http://localhost:3000
+    # No ready: block — with it omitted, any HTTP response from base_url counts
+    # as ready, and python's http.server answers a directory listing at "/".
+
+flows:
+  dir: qa/flows
+  tests: qa/tests
+
+defaults:
+  environment: sandbox
