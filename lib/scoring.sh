@@ -91,3 +91,20 @@ dealer_action() {
         echo stand
     fi
 }
+
+# dealer_should_hit succeeds when the dealer must draw another card.
+# House rule: hit on 16 or less, and hit on a soft 17 (a 17 using an ace as 11).
+dealer_should_hit() {
+    local hand=$1
+    local total=$(score_hand $hand)
+
+    if [ $total -le 16 ]; then
+        return 0
+    fi
+
+    if [ "$total" = 17 ] && [[ $hand == A* ]]; then
+        return 0
+    fi
+
+    return 1
+}
